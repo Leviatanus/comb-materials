@@ -230,11 +230,103 @@ example(of: "CurrentValueSubject") {
     
     subject
         .print()
-      .sink(receiveValue: { print("Second subscription:", $0) })
-      .store(in: &subscriptions)
+        .sink(receiveValue: { print("Second subscription:", $0) })
+        .store(in: &subscriptions)
     
     subject.send(completion: .finished) // otherwise each subscriber recieves cancel when we go out of this code's scope
 }
+
+example(of: "Dynamically adjusting Demand") {
+    
+    final class IntSubscriber: Subscriber {
+        typealias Input = Int
+        typealias Failure = Never
+        
+        func receive(subscription: Subscription) {
+            subscription.request(.max(2)) // demand starts in our case from 2
+        }
+        
+        func receive(_ input: Int) -> Subscribers.Demand {
+            print("Received value", input)
+            switch input {
+            case 1:
+                return .max(2) // (we assume that we now we execute subject.send(n + 1) each time so:
+                // we will have inital + this demand = 4, so ww will absorb 4 values in total
+            case 3:
+                return .max(1) // now we will absorb 5 values in total
+            default:
+                return .none // we stay on previous 5 values of demand
+            }
+        }
+        
+        func receive(completion: Subscribers.Completion<Never>) {
+            print("Received completion", completion)
+        }
+    }
+    let subscriber = IntSubscriber()
+    let subject = PassthroughSubject<Int, Never>()
+    subject.subscribe(subscriber)
+    subject.send(1)
+    subject.send(2)
+    subject.send(3)
+    subject.send(4)
+    subject.send(5)
+    subject.send(6)
+}
+
+example(of: "Type erasure") {
+    var subscriptions = Set<AnyCancellable>()
+    
+    // Create a passthrough subject.
+    let subject = PassthroughSubject<Int, Never>()
+    // Create a type-erased publisher from that subject.
+    let publisher = subject.eraseToAnyPublisher()
+    // Subscribe to the type-erased publisher.
+    publisher
+        .sink(receiveValue: { print($0) })
+        .store(in: &subscriptions)
+    // Send a new value through the passthrough subject.
+    subject.send(0)
+    
+    //    publisher.send(1) // Value of type 'AnyPublisher<Int, Never>' has no member 'send'
+}
+
+example(of: "Type erasure - from Apple doc") {
+    class TypeWithSubject {
+        public let publisher: some Publisher = PassthroughSubject<Int,Never>()
+    }
+    class TypeWithErasedSubject {
+        public let publisher: some Publisher = PassthroughSubject<Int,Never>()
+            .eraseToAnyPublisher()
+    }
+    
+    // In another module:
+    let nonErased = TypeWithSubject()
+    if let subject = nonErased.publisher as? PassthroughSubject<Int,Never> {
+        print("Successfully cast nonErased.publisher.")
+    }
+    let erased = TypeWithErasedSubject()
+    if let subject = erased.publisher as? PassthroughSubject<Int,Never> {
+        print("Successfully cast erased.publisher.")
+    }
+    
+    // Prints "Successfully cast nonErased.publisher."
+}
+
+example(of: "async/await") {
+  let subject = CurrentValueSubject<Int, Never>(0)
+    Task {
+      for await element in subject.values {
+        print("Element: \(element)")
+      }
+      print("Completed.")
+    }
+    subject.send(1)
+    subject.send(2)
+    subject.send(3)
+    subject.send(completion: .finished)
+}
+
 
 /// Copyright (c) 2021 Razeware LLC
 ///
