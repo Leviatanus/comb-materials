@@ -2,8 +2,6 @@ import Foundation
 import Combine
 import _Concurrency
 
-var subscriptions = Set<AnyCancellable>()
-
 /// `Publisher` protocol defines requirements for a type to be able to transmit a sequence of values over time to one or more subscribers
 
 /// We will create publishers and subscribe to them
@@ -101,14 +99,12 @@ example(of: "assign(to:)") {
         .assign(to: &object.$value)
 }
 
-/// Subscription between the publsher and the subscriber is the protocol `Subscription`
+/// Subscription between the publisher and the subscriber is the protocol `Subscription`
 
 /// Backpressure management - conecept of subscriber stating how many values it is willing to receive
 /// Each time a subscrber receives values it can increase its demand, yet it CANNOT decrese it
 
-// MARK: - Creating a custom subscriber
-
-example(of: "Custom Subscriber") {
+example(of: "Creating a custom subscriber") {
     // 1
     let publisher = (1...6).publisher
     // 2
@@ -136,8 +132,7 @@ example(of: "Custom Subscriber") {
     publisher.subscribe(subscriber)
 }
 
-// MARK: - Future type
-example(of: "Future") {
+example(of: "Future type") {
     func futureIncrement(
         integer: Int,
         afterDelay delay: TimeInterval) -> Future<Int, Never> {
@@ -149,8 +144,10 @@ example(of: "Future") {
             }
         }
     
+    var subscriptions = Set<AnyCancellable>()
+    
     // 1
-    let future = futureIncrement(integer: 1, afterDelay: 10)
+    let future = futureIncrement(integer: 1, afterDelay: 1)
     // 2
     future
         .sink(receiveCompletion: { print($0) },
@@ -158,10 +155,85 @@ example(of: "Future") {
         .store(in: &subscriptions)
     
     future
-      .sink(receiveCompletion: { print("Second", $0) },
-            receiveValue: { print("Second", $0) })
+        .sink(receiveCompletion: { print("Second", $0) },
+              receiveValue: { print("Second", $0) })
+        .store(in: &subscriptions)
+}
+
+example(of: "PassthroughSubject") {
+    // 1
+    enum MyError: Error {
+        case test }
+    // 2
+    final class StringSubscriber: Subscriber {
+        typealias Input = String
+        typealias Failure = MyError
+        func receive(subscription: Subscription) {
+            subscription.request(.max(2))
+        }
+        func receive(_ input: String) -> Subscribers.Demand {
+            print("Received value", input)
+            // 3
+            return input == "World" ? .max(1) : .none
+        }
+        func receive(completion: Subscribers.Completion<MyError>) {
+            print("Received completion", completion)
+        }
+    }
+    // 4
+    let subscriber = StringSubscriber()
+    
+    // 5
+    let subject = PassthroughSubject<String, MyError>()
+    // 6
+    subject.subscribe(subscriber) // FIRST SUBSCRIBER
+    // 7
+    let subscription = subject
+        .sink(
+            receiveCompletion: { completion in
+                print("Received completion (sink)", completion)
+            },
+            receiveValue: { value in
+                print("Received value (sink)", value)
+            }
+        ) // SECOND SUBSCRIBER
+    subject.send("Hello")
+    subject.send("World")
+    // 8
+    
+    subscription.cancel()
+    // 9
+    subject.send("Still there?")
+    
+    
+    subject.send(completion: .failure(MyError.test))
+    subject.send(completion: .finished) // once one completion event is sent the next ones won't have ANY effect
+    subject.send("How about another one?")
+}
+
+example(of: "CurrentValueSubject") {
+    // 1
+    var subscriptions = Set<AnyCancellable>()
+    // 2
+    let subject = CurrentValueSubject<Int, Never>(0)
+    // 3
+    subject
+        .print()
+        .sink(receiveValue: { print($0) })
+        .store(in: &subscriptions) // 4
+    
+    // we can ask the CurrentValueSubject for value at any time
+    print(subject.value)
+    
+    subject.value = 3 // we can send new value by setting value property
+    print(subject.value)
+    
+    subject
+        .print()
+      .sink(receiveValue: { print("Second subscription:", $0) })
       .store(in: &subscriptions)
     
+    subject.send(completion: .finished) // otherwise each subscriber recieves cancel when we go out of this code's scope
 }
 
 /// Copyright (c) 2021 Razeware LLC
