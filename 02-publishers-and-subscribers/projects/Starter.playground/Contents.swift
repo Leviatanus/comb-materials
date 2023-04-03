@@ -101,6 +101,69 @@ example(of: "assign(to:)") {
         .assign(to: &object.$value)
 }
 
+/// Subscription between the publsher and the subscriber is the protocol `Subscription`
+
+/// Backpressure management - conecept of subscriber stating how many values it is willing to receive
+/// Each time a subscrber receives values it can increase its demand, yet it CANNOT decrese it
+
+// MARK: - Creating a custom subscriber
+
+example(of: "Custom Subscriber") {
+    // 1
+    let publisher = (1...6).publisher
+    // 2
+    final class IntSubscriber: Subscriber {
+        // 3
+        typealias Input = Int
+        typealias Failure = Never
+        // 4
+        func receive(subscription: Subscription) {
+            subscription.request(.max(3))
+        }
+        // 5
+        func receive(_ input: Int) -> Subscribers.Demand {
+            print("Received value", input)
+            return .max(1) // every time we receive a value, we want to receive up to one more
+        }
+        // 6
+        func receive(completion: Subscribers.Completion<Never>) {
+            print("Received completion", completion)
+        }
+    }
+    
+    // creating a subscriber and subscribing
+    let subscriber = IntSubscriber()
+    publisher.subscribe(subscriber)
+}
+
+// MARK: - Future type
+example(of: "Future") {
+    func futureIncrement(
+        integer: Int,
+        afterDelay delay: TimeInterval) -> Future<Int, Never> {
+            Future<Int, Never> { promise in
+                print("Original")
+                DispatchQueue.global().asyncAfter(deadline: .now() + delay) {
+                    promise(.success(integer + 1))
+                }
+            }
+        }
+    
+    // 1
+    let future = futureIncrement(integer: 1, afterDelay: 10)
+    // 2
+    future
+        .sink(receiveCompletion: { print($0) },
+              receiveValue: { print($0) })
+        .store(in: &subscriptions)
+    
+    future
+      .sink(receiveCompletion: { print("Second", $0) },
+            receiveValue: { print("Second", $0) })
+      .store(in: &subscriptions)
+    
+}
+
 /// Copyright (c) 2021 Razeware LLC
 ///
 /// Permission is hereby granted, free of charge, to any person obtaining a copy
