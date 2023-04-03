@@ -4,7 +4,102 @@ import _Concurrency
 
 var subscriptions = Set<AnyCancellable>()
 
-<#Add your code here#>
+/// `Publisher` protocol defines requirements for a type to be able to transmit a sequence of values over time to one or more subscribers
+
+/// We will create publishers and subscribe to them
+example(of: "Publisher") {
+    // 1 create new notification name
+    let myNotification = Notification.Name("MyNotification")
+    // 2 get a Publisher for previously created Notification name
+    let publisher = NotificationCenter.default
+        .publisher(for: myNotification, object: nil)
+    // 3
+    let center = NotificationCenter.default
+    // 4
+    let observer = center.addObserver(
+        forName: myNotification,
+        object: nil,
+        queue: nil) { notification in
+            print("Notification received!")
+        }
+    // 5
+    center.post(name: myNotification, object: nil)
+    // 6
+    center.removeObserver(observer)
+}
+
+example(of: "Subscriber") {
+    let myNotification = Notification.Name("MyNotification")
+    let center = NotificationCenter.default
+    let publisher = center.publisher(for: myNotification, object: nil)
+    
+    // 1 by using sink method on a publisher we can create a subscriber
+    let subscription: AnyCancellable = publisher
+        .sink { _ in
+            print("Notification received from a publisher!")
+        }
+    // 2
+    center.post(name: myNotification, object: nil)
+    // 3
+    subscription.cancel()
+}
+
+example(of: "Just") {
+    // 1
+    let just = Just("Hello world!")
+    // 2
+    _ = just
+        .sink(
+            receiveCompletion: {
+                print("Received completion", $0)
+            },
+            receiveValue: {
+                print("Received value", $0)
+            })
+    
+    _ = just
+        .sink(
+            receiveCompletion: {
+                print("Received completion (another)", $0)
+            },
+            receiveValue: {
+                print("Received value (another)", $0)
+            })
+}
+
+/// This method allows us to set parameter of e.g. class object
+example(of: "assign(to:on:)") {
+    // 1
+    class SomeObject {
+        var value: String = "" {
+            didSet {
+                print(value)
+            }
+        } }
+    // 2
+    let object = SomeObject()
+    // 3
+    let publisher = ["Hello", "world!"].publisher
+    // 4 THIS CAN CREATE STRONG REFERENCE CYCLES
+    _ = publisher
+        .assign(to: \.value, on: object)
+}
+
+example(of: "assign(to:)") {
+    // 1
+    class SomeObject {
+        @Published var value = 0
+    }
+    let object = SomeObject()
+    // 2
+    object.$value
+        .sink {
+            print($0)
+        }
+    // 3 THIS METHOD CAN FREE US OF SITUATIONS WHERE STRING RERFERENCE CYCLE WOULD BE CREATED WITH assign(to:on:)
+    (0..<10).publisher
+        .assign(to: &object.$value)
+}
 
 /// Copyright (c) 2021 Razeware LLC
 ///
