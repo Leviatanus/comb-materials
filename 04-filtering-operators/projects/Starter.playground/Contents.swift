@@ -3,7 +3,54 @@ import Combine
 
 var subscriptions = Set<AnyCancellable>()
 
-<#Add your code here#>
+example(of: "filter") {
+    // 1
+    let numbers = (1...10).publisher
+    // 2
+    numbers
+        .filter { $0.isMultiple(of: 3) }
+        .sink(receiveValue: { n in
+            print("\(n) is a multiple of 3!")
+        })
+        .store(in: &subscriptions)
+}
+
+example(of: "removeDuplicates") {
+    // 1
+    let words = "hey hey there! want to listen to mister mister ?"
+        .components(separatedBy: " ")
+    // 2
+        .publisher
+    words
+        .removeDuplicates()
+        .sink(receiveValue: { print($0) })
+        .store(in: &subscriptions)
+}
+
+example(of: "compactMap") {
+    // 1
+    let strings = ["a", "1.24", "3",
+                   "def", "45", "0.23"].publisher
+    // 2
+    strings
+        .compactMap { Float($0) } // initialize a Float from each individual string. If Float’s initializer doesn’t know how to convert the provided string, it returns nil. Those nil values are automatically filtered out by the compactMap operator.
+        .sink(receiveValue: {
+            // 3
+            print($0) })
+        .store(in: &subscriptions)
+}
+
+// we ignore all emitted values, and receive only completion therefore
+example(of: "ignoreOutput") {
+    // 1
+    let numbers = (1...10_000).publisher
+    // 2
+    numbers
+        .ignoreOutput()
+        .sink(receiveCompletion: { print("Completed with: \($0)") },
+              receiveValue: { print($0) })
+        .store(in: &subscriptions)
+}
 
 /// Copyright (c) 2021 Razeware LLC
 ///
