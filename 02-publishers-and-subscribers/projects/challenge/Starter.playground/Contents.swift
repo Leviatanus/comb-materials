@@ -4,28 +4,49 @@ import Combine
 var subscriptions = Set<AnyCancellable>()
 
 example(of: "Create a Blackjack card dealer") {
-  let dealtHand = PassthroughSubject<Hand, HandError>()
-  
-  func deal(_ cardCount: UInt) {
-    var deck = cards
-    var cardsRemaining = 52
-    var hand = Hand()
+    var dealtHand = PassthroughSubject<Hand, HandError>()
     
-    for _ in 0 ..< cardCount {
-      let randomIndex = Int.random(in: 0 ..< cardsRemaining)
-      hand.append(deck[randomIndex])
-      deck.remove(at: randomIndex)
-      cardsRemaining -= 1
+    func deal(_ cardCount: UInt) {
+        var deck = cards
+        var cardsRemaining = 52
+        var hand = Hand()
+        
+        for _ in 0 ..< cardCount {
+            let randomIndex = Int.random(in: 0 ..< cardsRemaining)
+            hand.append(deck[randomIndex])
+            deck.remove(at: randomIndex)
+            cardsRemaining -= 1
+        }
+        
+        // Add code to update dealtHand here
+        
+        // evaluate the result returned from the hand’s points property. If the result is greater than 21, send the HandError.busted through the dealtHand subject. Otherwise, send the hand value.
+        let pointsOnHand = hand.points
+        if (pointsOnHand > 21) {
+            dealtHand.send(completion: .failure(HandError.busted))
+        } else {
+            dealtHand.send(hand)
+        }
     }
     
-    // Add code to update dealtHand here
+    // Add subscription to dealtHand here
+    // subscribe to dealtHand and handle receiving both values and an error.
+    let subscriber = dealtHand.sink { completion in
+        switch completion {
+        case .finished:
+            print("Finished")
+            break
+        case .failure:
+            if case let .failure(error) = completion {
+                print(error)
+            }
+            break
+        }
+    } receiveValue: { value in
+        print("\(value.cardString) \(value.points)")
+    }
     
-  }
-  
-  // Add subscription to dealtHand here
-  
-  
-  deal(3)
+    deal(3)
 }
 
 /// Copyright (c) 2021 Razeware LLC

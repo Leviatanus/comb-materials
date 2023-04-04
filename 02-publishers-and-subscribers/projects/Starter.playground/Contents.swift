@@ -314,12 +314,12 @@ example(of: "Type erasure - from Apple doc") {
 }
 
 example(of: "async/await") {
-  let subject = CurrentValueSubject<Int, Never>(0)
+    let subject = CurrentValueSubject<Int, Never>(0)
     Task {
-      for await element in subject.values {
-        print("Element: \(element)")
-      }
-      print("Completed.")
+        for await element in subject.values {
+            print("Element: \(element)")
+        }
+        print("Completed.")
     }
     subject.send(1)
     subject.send(2)
