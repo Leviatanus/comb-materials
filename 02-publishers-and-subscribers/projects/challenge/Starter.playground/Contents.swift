@@ -37,13 +37,14 @@ example(of: "Create a Blackjack card dealer") {
             print("Finished")
             break
         case .failure:
+            /// `case let` is a pattern matching syntax in Swift. It allows you to match and extract the associated value(s) of an enum case, and then bind them to a variable.
             if case let .failure(error) = completion {
                 print(error)
             }
             break
         }
     } receiveValue: { value in
-        print("\(value.cardString) \(value.points)")
+        print("\(value.cardString) - points: \(value.points)")
     }
     
     deal(3)
