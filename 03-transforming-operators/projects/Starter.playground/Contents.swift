@@ -25,6 +25,7 @@ example(of: "collect - return several array of given max length") {
         .store(in: &subscriptions)
 }
 
+/// It works just like Swift’s standard map, except that it operates on values emitted from a publisher. This operator re-publishes values as soon as they are published by the upstream.
 example(of: "map") {
     var subscriptions = Set<AnyCancellable>()
     
@@ -135,7 +136,7 @@ example(of: "replaceEmpty(with:)") {
         .store(in: &subscriptions)
 }
 
-/// In the case of `scan` if new value if emitted we get access to
+/// In the case of `scan` if new value is emitted we get access to previous e.g. latest variable
 example(of: "scan") {
     var subscriptions = Set<AnyCancellable>()
     // 1
