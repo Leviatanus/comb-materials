@@ -160,6 +160,7 @@ example(of: "Future type") {
         .store(in: &subscriptions)
 }
 
+/// `PassthroughSubject` enables you to publish new values on demand. It will happily pass along those values and a completion event.
 example(of: "PassthroughSubject") {
     // 1
     enum MyError: Error {
@@ -211,6 +212,7 @@ example(of: "PassthroughSubject") {
     subject.send("How about another one?")
 }
 
+/// We can view the current value of a publisher in  imperative code with `CurrentValueSubject`
 example(of: "CurrentValueSubject") {
     // 1
     var subscriptions = Set<AnyCancellable>()
