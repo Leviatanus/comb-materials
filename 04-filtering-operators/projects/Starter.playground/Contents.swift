@@ -52,6 +52,137 @@ example(of: "ignoreOutput") {
         .store(in: &subscriptions)
 }
 
+/// `first(where:)` is a lazy operator! As soon as the value is found, the subscription is cancelled (the first(where:) cancels the upstream subscription))!
+example(of: "first(where:)") {
+    // 1
+    let numbers = (1...9).publisher
+    // 2
+    numbers
+        .print("numbers") // You can use the print operator anywhere in your operator chain to see exactly what events occur at that point.
+        .first(where: { $0 % 2 == 0 })
+        .sink(receiveCompletion: { print("Completed with: \($0)") },
+              receiveValue: { print($0) })
+        .store(in: &subscriptions)
+}
+
+/// `last(where:)` is a greedy operator - it can only work with finite streams of data
+example(of: "last(where:)") {
+    // 1
+    let numbers = (1...9).publisher
+    // 2
+    numbers
+        .last(where: { $0 % 2 == 0 })
+        .sink(receiveCompletion: { print("Completed with: \($0)") },
+              receiveValue: { print($0) })
+        .store(in: &subscriptions)
+}
+
+example(of: "last(where:)") {
+    let numbers = PassthroughSubject<Int, Never>()
+    numbers
+        .last(where: { $0 % 2 == 0 })
+        .sink(receiveCompletion: { print("Completed with: \($0)") },
+              receiveValue: { print($0) })
+        .store(in: &subscriptions)
+    numbers.send(1)
+    numbers.send(2)
+    numbers.send(3)
+    numbers.send(4)
+    numbers.send(5) // here we still do not know the last even number
+    numbers.send(completion: .finished) // stream ended, we know the last even number
+}
+
+// ignores first n values
+example(of: "dropFirst") {
+    // 1
+    let numbers = (1...10).publisher
+    // 2
+    numbers
+        .dropFirst(8)
+        .sink(receiveValue: { print($0) })
+        .store(in: &subscriptions)
+}
+
+/// Ignores any values emitted by the publisher until the first time that predicate is met
+example(of: "drop(while:)") {
+    // 1
+    let numbers = (1...10).publisher
+    // 2
+    numbers
+        .drop(while: {
+            print("x")
+            return $0 % 5 != 0
+        })
+        .sink(receiveValue: { print($0) })
+        .store(in: &subscriptions)
+}
+
+/// drop values from one publishers until the defined other one starts emitting some values
+example(of: "drop(untilOutputFrom:)") {
+    // 1
+    let isReady = PassthroughSubject<Void, Never>()
+    let taps = PassthroughSubject<Int, Never>()
+    // 2
+    taps
+        .drop(untilOutputFrom: isReady)
+        .sink(receiveValue: { print($0) })
+        .store(in: &subscriptions)
+    // 3
+    (1...5).forEach { n in
+        taps.send(n)
+        if n == 3 {
+            isReady.send()
+        }
+    }
+}
+
+// prefix family of operators
+
+/// `prefix` takes only n first values. This operator is lazy.
+example(of: "prefix") {
+    // 1
+    let numbers = (1...10).publisher
+    // 2
+    numbers
+        .prefix(2)
+        .sink(receiveCompletion: { print("Completed with: \($0)") },
+              receiveValue: { print($0) })
+        .store(in: &subscriptions)
+}
+
+example(of: "prefix(while:)") {
+    // 1
+    let numbers = (1...10).publisher
+    // 2
+    numbers
+        .prefix(while: { $0 < 3 })
+        .sink(receiveCompletion: { print("Completed with: \($0)") },
+              receiveValue: { print($0) })
+        .store(in: &subscriptions)
+}
+
+/// `prefix(untilOutputFrom:)` takes values until a second publisher emits.
+example(of: "prefix(untilOutputFrom:)") {
+    // 1
+    let isReady = PassthroughSubject<Void, Never>()
+    let taps = PassthroughSubject<Int, Never>()
+    // 2
+    taps
+        .prefix(untilOutputFrom: isReady)
+        .sink(receiveCompletion: { print("Completed with: \($0)") },
+              receiveValue: { print($0) })
+        .store(in: &subscriptions)
+    // 3
+    (1...5).forEach { n in
+        taps.send(n)
+        if n == 2 {
+            isReady.send()
+        }
+    }
+    
+}
+
+
 /// Copyright (c) 2021 Razeware LLC
 ///
 /// Permission is hereby granted, free of charge, to any person obtaining a copy
