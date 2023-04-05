@@ -3,7 +3,21 @@ import Combine
 
 var subscriptions = Set<AnyCancellable>()
 
-<#Add your code here#>
+let numbers = (1...100).publisher
+
+numbers
+//1. Skip the first 50 values emitted by the upstream publisher.
+    .dropFirst(50)
+//2. Take the next 20 values after those first 50 values.
+    .prefix(20)
+//3. Only take even numbers.
+    .filter { value in
+        value.isMultiple(of: 2)
+    }
+    .sink { value in
+        print(value)
+    }
+
 
 /// Copyright (c) 2021 Razeware LLC
 ///
