@@ -225,6 +225,47 @@ example(of: "combineLatest") {
     publisher2.send(completion: .finished)
 }
 
+// zip operator - works similarly to zip operator in Swift Foundation library
+example(of: "zip operator in Foundation") {
+    let names = ["Alice", "Bob", "Charlie"]
+    let ages = [25, 30, 35]
+    let heights = [1.6, 1.8, 1.7]
+    
+    let combined = zip(names, zip(ages, heights))
+    
+    for (name, (age, height)) in combined {
+        print("\(name) is \(age) years old and \(height)m tall")
+    }
+}
+
+/// `zip` operator waits for the publishers to publish values at current index before emitting the touple
+example(of: "zip") {
+    // 1
+    let publisher1 = PassthroughSubject<Int, Never>()
+    let publisher2 = PassthroughSubject<String, Never>()
+    // 2
+    publisher1
+        .zip(publisher2)
+        .sink(
+            receiveCompletion: { _ in print("Completed") },
+            receiveValue: { print("P1: \($0), P2: \($1)") }
+        )
+        .store(in: &subscriptions)
+    // 3
+    publisher1.send(1)
+    publisher1.send(2)
+    publisher2.send("a")
+    publisher2.send("b")
+    publisher1.send(3)
+    publisher2.send("c")
+    publisher2.send("d") // this will not be emitted because publisher 1 did not emit value that would correspond
+    
+    // 4
+    publisher1.send(completion: .finished)
+    publisher2.send(completion: .finished)
+}
+
+
 // Copyright (c) 2021 Razeware LLC
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
