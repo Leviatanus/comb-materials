@@ -107,7 +107,123 @@ example(of: "append(Publisher)") {
 
 // Advanced combining
 
+/// `switchToLatest` allows us to switch entire publsher subscriptions on the fly while cancelling the pending publisher subscription, thus switching to the latest one
+example(of: "switchToLatest") {
+    // 1
+    let publisher1 = PassthroughSubject<Int, Never>()
+    let publisher2 = PassthroughSubject<Int, Never>()
+    let publisher3 = PassthroughSubject<Int, Never>()
+    // 2
+    let publishers = PassthroughSubject<PassthroughSubject<Int,
+                                                           Never>, Never>()
+    // 3
+    publishers
+        .switchToLatest()
+        .sink(
+            receiveCompletion: { _ in print("Completed!") },
+            receiveValue: { print($0) }
+        )
+        .store(in: &subscriptions)
+    // 4
+    publishers.send(publisher1) // we switched to publisher 1,so sink will receive the 1 and 2 send below (but not 3 that was send later)
+    publisher1.send(1)
+    publisher1.send(2)
+    // 5
+    publishers.send(publisher2)
+    publisher1.send(3)
+    publisher2.send(4)
+    publisher2.send(5)
+    // 6
+    publishers.send(publisher3)
+    publisher2.send(6)
+    publisher3.send(7)
+    publisher3.send(8)
+    publisher3.send(9)
+    // 7
+    publisher3.send(completion: .finished)
+    publishers.send(completion: .finished)
+}
 
+///  Use case of `switchToLatest`
+///  Your user taps a button that triggers a network request. Immediately afterward, the user taps the button again, which triggers a second network request. But how do you get rid of the pending request, and only use the latest request? switchToLatest to the rescue!
+example(of: "switchToLatest - Network Request") {
+    //    let url = URL(string: "https://source.unsplash.com/random")!
+    //    // 1
+    //    func getImage() -> AnyPublisher<UIImage?, Never> {
+    //        URLSession.shared
+    //            .dataTaskPublisher(for: url)
+    //            .map { data, _ in UIImage(data: data) }
+    //            .print("image")
+    //            .replaceError(with: nil)
+    //            .eraseToAnyPublisher()
+    //    }
+    //    // 2
+    //    let taps = PassthroughSubject<Void, Never>()
+    //    taps
+    //        .map { _ in getImage() } // 3
+    //        .switchToLatest() // 4
+    //        .sink(receiveValue: { _ in })
+    //        .store(in: &subscriptions)
+    //    // 5
+    //    taps.send()
+    //    DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+    //        taps.send()
+    //    }
+    //    DispatchQueue.main.asyncAfter(deadline: .now() + 3.1) {
+    //        taps.send()
+    //    }
+}
+
+/// `merge(with:)` This operator interleaves emissions from different publishers of the same type
+example(of: "merge(with:)") {
+    // 1
+    let publisher1 = PassthroughSubject<Int, Never>()
+    let publisher2 = PassthroughSubject<Int, Never>()
+    // 2
+    publisher1
+        .merge(with: publisher2) // Combine offers overloads that let you merge up to eight different publishers
+        .sink(
+            receiveCompletion: { _ in print("Completed") },
+            receiveValue: { print($0) }
+        )
+        .store(in: &subscriptions)
+    // 3
+    publisher1.send(1)
+    publisher1.send(2)
+    publisher2.send(3)
+    publisher1.send(4)
+    publisher2.send(5)
+    // 4
+    publisher1.send(completion: .finished)
+    publisher2.send(completion: .finished)
+}
+
+// we combine the output of two publishers - the receiveValue in sink will return tuple of latest results from each publishers each time a new value is received from any publisher.
+example(of: "combineLatest") {
+    // 1
+    let publisher1 = PassthroughSubject<Int, Never>()
+    let publisher2 = PassthroughSubject<String, Never>()
+    // 2
+    publisher1
+        .combineLatest(publisher2)
+        .sink(
+            receiveCompletion: { _ in print("Completed") },
+            receiveValue: { (outputA, outputB) in
+                print("P1: \(outputA), P2: \(outputB)")
+            }
+        )
+        .store(in: &subscriptions)
+    // 3
+    publisher1.send(1)
+    publisher1.send(2)
+    publisher2.send("a")
+    publisher2.send("b")
+    publisher1.send(3)
+    publisher2.send("c")
+    // 4
+    publisher1.send(completion: .finished)
+    publisher2.send(completion: .finished)
+}
 
 // Copyright (c) 2021 Razeware LLC
 //
