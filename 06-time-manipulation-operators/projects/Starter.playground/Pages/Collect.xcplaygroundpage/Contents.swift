@@ -2,7 +2,49 @@ import Combine
 import SwiftUI
 import PlaygroundSupport
 
-<# Add your code here #>
+/// In certain situations, you may need to collect values from a publisher at specified time intervals.
+/// This is a form of buffering that can be useful.
+/// For example, when you want to average a group of values over short periods of time and output the average.
+
+let valuesPerSecond = 1.0
+let collectTimeStride = 4
+let collectMaxCount = 2
+
+// 1
+let sourcePublisher = PassthroughSubject<Date, Never>()
+// 2
+let collectedPublisher = sourcePublisher
+    .collect(.byTime(DispatchQueue.main, .seconds(collectTimeStride)))
+    .flatMap { dates in dates.publisher }
+
+let collectedPublisher2 = sourcePublisher
+    .collect(.byTimeOrCount(DispatchQueue.main, .seconds(collectTimeStride), collectMaxCount)) // collect two vales and publish them or wait 4 seconds and publish one or zero emitted values in that time stride
+    .flatMap { dates in dates.publisher }
+
+let subscription = Timer
+    .publish(every: 1.0 / valuesPerSecond, on: .main, in: .common)
+    .autoconnect()
+    .subscribe(sourcePublisher)
+
+let sourceTimeline = TimelineView(title: "Emitted values:")
+let collectedTimeline = TimelineView(title: "Collected values (every \(collectTimeStride)s):")
+let collectedTimeline2 = TimelineView(title: "Collected values (at most \(collectMaxCount) every \(collectTimeStride)s):")
+
+let view = VStack(spacing: 40) {
+  sourceTimeline
+  collectedTimeline
+  collectedTimeline2
+}
+
+
+
+PlaygroundPage.current.liveView = UIHostingController(rootView:
+                                                        view.frame(width: 375, height: 600))
+
+sourcePublisher.displayEvents(in: sourceTimeline)
+collectedPublisher.displayEvents(in: collectedTimeline)
+collectedPublisher2.displayEvents(in: collectedTimeline2)
+
 
 //: [Next](@next)
 /*:
