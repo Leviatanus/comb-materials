@@ -2,8 +2,37 @@ import Combine
 import SwiftUI
 import PlaygroundSupport
 
-<# Add your code here #>
+let subject = PassthroughSubject<String, Never>()
 
+/// `debounce` will wait for n seconds after receiving a value efore emitting the value, if new value is received before debounce time, no value will be emitted (yet)
+///  WARNING!  Publisher’s completion - If your publisher completes right after the last value was emitted, but before the time configured for debounce elapses, you will never see the last value in the debounced publisher!
+let debounced = subject
+    .debounce(for: .seconds(1.0), scheduler: DispatchQueue.main) // allow max 1 value per second to be send
+    .share() // single subscription point to debounce that will show the same results at the same time to all subscribers
+
+let subjectTimeline = TimelineView(title: "Emitted values")
+let debouncedTimeline = TimelineView(title: "Debounced values")
+let view = VStack(spacing: 100) {
+    subjectTimeline
+    debouncedTimeline
+}
+PlaygroundPage.current.liveView = UIHostingController(rootView:
+                                                        view.frame(width: 375, height: 600))
+subject.displayEvents(in: subjectTimeline)
+debounced.displayEvents(in: debouncedTimeline)
+
+let subscription1 = subject
+    .sink { string in
+        print("+\(deltaTime)s: Subject emitted: \(string)")
+    }
+
+let subscription2 = debounced
+    .sink { string in
+        print("+\(deltaTime)s: Debounced emitted: \(string)")
+    }
+
+// The feed(with:) method takes a data set and sends data to the given subject at pre-defined time intervals. A handy tool for simulations and mocking data input!
+subject.feed(with: typingHelloWorld)
 //: [Next](@next)
 /*:
  Copyright (c) 2021 Razeware LLC
