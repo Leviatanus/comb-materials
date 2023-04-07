@@ -32,7 +32,8 @@ import SwiftUI
 struct CollageNeueApp: App {
   var body: some Scene {
     WindowGroup {
-      MainView().environmentObject(CollageNeueModel())
+      MainView()
+        .environmentObject(CollageNeueModel())
     }
   }
 }

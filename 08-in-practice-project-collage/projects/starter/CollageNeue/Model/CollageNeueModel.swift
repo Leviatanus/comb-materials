@@ -28,38 +28,84 @@
 
 import UIKit
 import Photos
+import Combine
 
 class CollageNeueModel: ObservableObject {
   static let collageSize = CGSize(width: UIScreen.main.bounds.width, height: 200)
+  
+  private var subscriptions = Set<AnyCancellable>()
+  private let images = CurrentValueSubject<[UIImage], Never>([]) // when binding data to UI it is better to use CurrentValuSubject rather than PassthroughSubject
+  // CurrentValueSubject guaranteed that at least one value will be send and UI will not have an undefined state
+  
+  let updateUISubject = PassthroughSubject<Int, Never>()
+  
+  private(set) var selectedPhotosSubject = PassthroughSubject<UIImage, Never>()
+  
+  @Published var imagePreview: UIImage?
   
   // MARK: - Collage
   
   private(set) var lastSavedPhotoID = ""
   private(set) var lastErrorMessage = ""
-
+  
   func bindMainView() {
-    
+    // You begin a subscription to the current collection of photos.
+    images
+      .handleEvents(receiveOutput: { [weak self] photos in
+        self?.updateUISubject.send(photos.count)
+      })
+    // You use map to convert them to a single collage by calling into UIImage.collage(images:size:), a helper method defined in UIImage+Collage.swift.
+      .map { photos in
+        UIImage.collage(images: photos, size: Self.collageSize)
+      }
+    // You use the assign(to:) subscriber to bind the resulting collage image to imagePreview, which is the center screen image view. Using the assign(to:) subscriber automatically manages the subscription lifecycle.
+      .assign(to: &$imagePreview)
   }
-
+  
   func add() {
-    
+    selectedPhotosSubject = PassthroughSubject<UIImage, Never>()
+    //    let newPhotos = selectedPhotosSubject
+    selectedPhotosSubject
+      .map { [unowned self] newImage in
+        // Get the current list of selected images and append any new images to it.
+        return self.images.value + [newImage]
+      }
+    // Use assign to send the updated images array through the images subject.
+      .assign(to: \.value, on: images)
+    // You store the new subscription in subscriptions. However, the subscription will end whenever the user dismisses the presented view controller.
+      .store(in: &subscriptions)
   }
-
+  
   func clear() {
-    
+    images.send([])
   }
-
+  
   func save() {
-    
+    guard let image = imagePreview else { return }
+    // Subscribe the PhotoWriter.save(_:) future by using sink(receiveCompletion:receiveValue:).
+    PhotoWriter.save(image)
+      .sink(
+        receiveCompletion: { [unowned self] completion in // unowned self should be used if we are sure that the object will not be released from memory e.g. view that is never popped out of the stack
+          // In case of completion with a failure, you save the error message to lastErrorMessage.
+          if case .failure(let error) = completion {
+            lastErrorMessage = error.localizedDescription
+          }
+          clear()
+        },
+        receiveValue: { [unowned self] id in
+          // In case you get back a value — the new asset identifier — you store it in lastSavedPhotoID.
+          lastSavedPhotoID = id
+        }
+      )
+      .store(in: &subscriptions)
   }
   
   // MARK: -  Displaying photos picker
   private lazy var imageManager = PHCachingImageManager()
   private(set) var thumbnails = [String: UIImage]()
   private let thumbnailSize = CGSize(width: 200, height: 200)
-
+  
   func bindPhotoPicker() {
-    
   }
   
   func loadPhotos() -> PHFetchResult<PHAsset> {
@@ -67,7 +113,7 @@ class CollageNeueModel: ObservableObject {
     allPhotosOptions.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: true)]
     return PHAsset.fetchAssets(with: allPhotosOptions)
   }
-
+  
   func enqueueThumbnail(asset: PHAsset) {
     guard thumbnails[asset.localIdentifier] == nil else { return }
     
@@ -93,7 +139,7 @@ class CollageNeueModel: ObservableObject {
         return
       }
       
-      // Send the selected image
+      self.selectedPhotosSubject.send(image)
     }
   }
 }
