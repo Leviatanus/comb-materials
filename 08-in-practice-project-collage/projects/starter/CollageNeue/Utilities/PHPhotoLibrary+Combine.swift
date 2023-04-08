@@ -31,12 +31,21 @@ import Photos
 import Combine
 
 extension PHPhotoLibrary {
-
+  
+  static var isAuthorized: Future<Bool, Never> {
+    let future = Future<Bool, Never> { promise in
+      fetchAuthorizationStatus { value in
+        promise(.success(value))
+      }
+    }
+    return future
+  }
+  
   static func fetchAuthorizationStatus(callback: @escaping (Bool) -> Void) {
     // Fetch the current status.
     let currentlyAuthorized = authorizationStatus() == .authorized
     
-    // If authozied callback immediately.
+    // If authorized callback immediately.
     guard !currentlyAuthorized else {
       return callback(currentlyAuthorized)
     }

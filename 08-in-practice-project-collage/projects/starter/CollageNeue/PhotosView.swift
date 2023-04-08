@@ -41,7 +41,7 @@ struct PhotosView: View {
   @State private var photos = PHFetchResult<PHAsset>()
   @State private var imageManager = PHCachingImageManager()
   @State private var isDisplayingError = false
-
+  
   var body: some View {
     NavigationView {
       ScrollView {
@@ -77,7 +77,15 @@ struct PhotosView: View {
     })
     .onAppear {
       // Check for Photos access authorization and reload the list if authorized.
-      PHPhotoLibrary.fetchAuthorizationStatus { status in
+      //      PHPhotoLibrary.fetchAuthorizationStatus { status in
+      //        if status {
+      //          DispatchQueue.main.async {
+      //            self.photos = model.loadPhotos()
+      //          }
+      //        }
+      //      }
+      _ = PHPhotoLibrary.isAuthorized.sink { status in
+        print("status: \(status)")
         if status {
           DispatchQueue.main.async {
             self.photos = model.loadPhotos()

@@ -64,8 +64,14 @@ class CollageNeueModel: ObservableObject {
   
   func add() {
     selectedPhotosSubject = PassthroughSubject<UIImage, Never>()
-    //    let newPhotos = selectedPhotosSubject
-    selectedPhotosSubject
+    //    let newPhotos = selectedPhotosSubject.share() // share() operator wraps the publisher in a class and therefore it can safely emit to multiple subscribers without performing its underlying work again.
+    let newPhotos = selectedPhotosSubject
+    // take values until a condition is met (take max 6 photos for a collage)
+      .prefix(while: { [unowned self] _ in
+        self.images.value.count < 6
+      })
+      .share()
+    newPhotos
       .map { [unowned self] newImage in
         // Get the current list of selected images and append any new images to it.
         return self.images.value + [newImage]

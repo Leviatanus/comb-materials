@@ -133,9 +133,7 @@ example(of: "Creating a custom subscriber") {
 }
 
 example(of: "Future type") {
-    func futureIncrement(
-        integer: Int,
-        afterDelay delay: TimeInterval) -> Future<Int, Never> {
+    func futureIncrement(integer: Int, afterDelay delay: TimeInterval) -> Future<Int, Never> {
             Future<Int, Never> { promise in
                 print("Original")
                 DispatchQueue.global().asyncAfter(deadline: .now() + delay) {
