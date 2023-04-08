@@ -94,6 +94,7 @@ struct PhotosView: View {
       //      }
       print("on appear")
       PHPhotoLibrary.isAuthorized
+//        .receive(on: DispatchQueue.main) this could be used if the sink did not use DispatchQueue.main.async
         .print("PHPhotoLibrary.isAuthorized in PhotosView")
         .sink { status in
           print("status: \(status)")
