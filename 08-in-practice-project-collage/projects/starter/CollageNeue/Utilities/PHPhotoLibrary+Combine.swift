@@ -35,9 +35,11 @@ extension PHPhotoLibrary {
   static var isAuthorized: Future<Bool, Never> {
     let future = Future<Bool, Never> { promise in
       fetchAuthorizationStatus { value in
+        print("fetchAuthorizationStatus: \(value)")
         promise(.success(value))
       }
     }
+    print("returning future")
     return future
   }
   

@@ -34,6 +34,8 @@ struct PhotosView: View {
   @EnvironmentObject var model: CollageNeueModel
   @Environment(\.presentationMode) var presentationMode
   
+  @State var isNoAccessToCamerRollErrorPresented = false
+  
   let columns: [GridItem] = [.init(.adaptive(minimum: 100, maximum: 200))]
   
   @State private var subscriptions = [AnyCancellable]()
@@ -70,6 +72,12 @@ struct PhotosView: View {
         Button("Close", role: .cancel) {
           self.presentationMode.wrappedValue.dismiss()
         }
+        .alert("No access to Camera Roll", isPresented: $isNoAccessToCamerRollErrorPresented) {
+          // hide current view
+          Button("Cancel") {
+            presentationMode.wrappedValue.dismiss()
+          }
+        }
       }
     }
     .alert("No access to Camera Roll", isPresented: $isDisplayingError, actions: { }, message: {
@@ -84,14 +92,20 @@ struct PhotosView: View {
       //          }
       //        }
       //      }
-      _ = PHPhotoLibrary.isAuthorized.sink { status in
-        print("status: \(status)")
-        if status {
-          DispatchQueue.main.async {
-            self.photos = model.loadPhotos()
+      print("on appear")
+      PHPhotoLibrary.isAuthorized
+        .print("PHPhotoLibrary.isAuthorized in PhotosView")
+        .sink { status in
+          print("status: \(status)")
+          if status {
+            DispatchQueue.main.async {
+              self.photos = model.loadPhotos()
+            }
+          } else {
+            isNoAccessToCamerRollErrorPresented = true
           }
         }
-      }
+        .store(in: &subscriptions)
       
       model.bindPhotoPicker()
     }
