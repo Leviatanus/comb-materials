@@ -72,6 +72,7 @@ class StoriesTableViewController: UITableViewController {
   }
   
   override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+      print("Story \(stories[indexPath.row]) selected)")
     tableView.deselectRow(at: indexPath, animated: true)
   }
 }
